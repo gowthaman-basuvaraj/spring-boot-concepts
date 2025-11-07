@@ -2,16 +2,19 @@ package com.example.demo.entity;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "users", indexes = @Index(unique = true, columnList = "user_name"))
-public class User {
-    @Id
-    @GeneratedValue
-    private Long id;
+public class User extends Base {
     private String name;
     private String userName;
     private String address;
     private String pinCode;
+    private boolean active;
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<Post> posts = new ArrayList<>();
 
     public String getName() {
         return name;
@@ -43,5 +46,21 @@ public class User {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    public List<Post> getPosts() {
+        return posts;
+    }
+
+    public void setPosts(List<Post> posts) {
+        this.posts = posts;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }
