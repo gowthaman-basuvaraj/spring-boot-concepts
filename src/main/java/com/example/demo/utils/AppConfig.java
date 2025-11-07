@@ -10,6 +10,7 @@ import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigB
 import org.springframework.cloud.client.circuitbreaker.Customizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.time.Duration;
@@ -31,6 +32,7 @@ public class AppConfig {
     }
 
     @Bean
+    @Primary
     public DBConfig defaultDbConfig() {
         return new DBConfig(false);
     }

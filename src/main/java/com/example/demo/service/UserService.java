@@ -19,34 +19,33 @@ import java.util.function.Supplier;
 
 @Service
 public class UserService {
-    private final UserRepo userRepo;
-    private final RoleConfig defaultConfig;
-    private final RoleConfig adminRoleConfig;
-    private final DBConfig dbConfig;
-    private final WebClient webClient;
-    private final WebClient advancedWebClient;
-    // 1. Inject the publisher
-    private final ApplicationEventPublisher eventPublisher;
-    private CircuitBreakerFactory cbFactory;
-
+    @Autowired
+    UserRepo userRepo;
 
     @Autowired
-    public UserService(UserRepo userRepo,
-                       DBConfig dbConfig,
-                       @Qualifier("withAuth") WebClient webClient,
-                       WebClient advancedWebClient,
-                       @Qualifier("defaultRoleConfig") RoleConfig defaultRoleConfig,
-                       @Qualifier("adminRoleConfig") RoleConfig adminRoleConfig, ApplicationEventPublisher eventPublisher, CircuitBreakerFactory cbFactory
-    ) {
-        this.advancedWebClient = advancedWebClient;
-        this.webClient = webClient;
-        this.dbConfig = dbConfig;
-        this.userRepo = userRepo;
-        this.defaultConfig = defaultRoleConfig;
-        this.adminRoleConfig = adminRoleConfig;
-        this.eventPublisher = eventPublisher;
-        this.cbFactory = cbFactory;
-    }
+    @Qualifier("defaultRoleConfig")
+    RoleConfig defaultConfig;
+
+    @Autowired
+    @Qualifier("adminRoleConfig")
+    RoleConfig adminRoleConfig;
+
+    @Autowired
+    DBConfig dbConfig;
+
+    @Qualifier("withAuth")
+    @Autowired
+    WebClient webClient;
+
+    @Autowired
+    WebClient advancedWebClient;
+
+    @Autowired
+    ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    CircuitBreakerFactory cbFactory;
+
 
     public void saveUser(User user) throws UserExistsException {
         System.out.println(defaultConfig.allowed());
