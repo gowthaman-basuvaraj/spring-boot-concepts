@@ -6,7 +6,7 @@ framework is extended, how persistence and transactions actually behave, and how
 unreliable HTTP dependency without taking your own service down.
 
 Every claim in the comments is backed by code that runs, and the surprising ones are backed by a
-test. **73 tests, clean build.**
+test. **84 tests, clean build.**
 
 ```
 springboot-learn
@@ -82,6 +82,7 @@ Start at [docs/README.md](docs/README.md) for the index and a one-hour reading o
 | [docs/06-testing.md](docs/06-testing.md) | Slice tests, `ApplicationContextRunner`, context caching, the tests in this repo |
 | [docs/08-http-clients.md](docs/08-http-clients.md) | All five HTTP client styles side by side: choosing, where each hides its timeouts, and how differently each one fails |
 | [docs/09-extension-points.md](docs/09-extension-points.md) | The `BeanPostProcessor` family, writing a proxy-returning BPP, your own `@Enable*`, and the servlet filter chain |
+| [docs/10-exception-handling.md](docs/10-exception-handling.md) | Where an exception can be caught and in what order, RFC 7807 problem details, choosing 409 vs 422, the three validation exceptions, and what must never reach a client |
 | [docs/07-production-checklist.md](docs/07-production-checklist.md) | The list to run through before a service ships |
 
 ### Reference
@@ -89,6 +90,7 @@ Start at [docs/README.md](docs/README.md) for the index and a one-hour reading o
 | Page | What it covers |
 | --- | --- |
 | [docs/reference/annotations.md](docs/reference/annotations.md) | **Read it.** The mental model for *who processes an annotation* and the only three ways one can silently do nothing, then every family with its traps, a look-alikes table, and the proxy-defeated cheat sheet |
+| [docs/reference/annotations-expanded.md](docs/reference/annotations-expanded.md) | **Compare it.** What each annotation expands to - the longhand code Spring writes on your behalf. `@SpringBootApplication` down to `@Import`, `@Transactional` as a try/catch, `@Retryable` as a `RetryTemplate` |
 | [docs/reference/annotations-index.md](docs/reference/annotations-index.md) | **Look it up.** 258 annotations A-Z with their exact package and whether this project uses them; the 24 simple names that are ambiguous on this classpath (where the wrong auto-import compiles and does nothing); and a task-to-annotation finder. [Generated](docs/reference/_generator/README.md) from the real classpath, so a wrong package fails the build of the page rather than becoming a plausible-looking wrong row |
 
 ## Bugs this project found in itself

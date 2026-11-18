@@ -14,6 +14,7 @@ import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -56,13 +58,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(OrderNotFoundException.class)
     ProblemDetail handleNotFound(OrderNotFoundException ex) {
-        return problem(HttpStatus.NOT_FOUND, "Order not found", ex.getMessage(), "order-not-found");
+        return problem(HttpStatus.NOT_FOUND, "Order not found", ex.getMessage(), "order-not-found", ex);
     }
 
     @ExceptionHandler(InsufficientStockException.class)
     ProblemDetail handleStock(InsufficientStockException ex) {
         ProblemDetail problem = problem(HttpStatus.CONFLICT, "Insufficient stock",
-                ex.getMessage(), "insufficient-stock");
+                ex.getMessage(), "insufficient-stock", ex);
         // Problem details are extensible: machine-readable fields beat parsing the message.
         problem.setProperty("sku", ex.getSku());
         problem.setProperty("requested", ex.getRequested());
@@ -70,21 +72,33 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
+    /**
+     * A database constraint said no - most often a unique index.
+     *
+     * <p>Mapping this to 409 rather than letting it reach the catch-all matters: a duplicate
+     * {@code order_number} is a client-visible conflict they can act on, not an internal error.
+     * Do NOT echo {@code ex.getMessage()} here - it contains the constraint name, the table and
+     * often the offending values, which is a schema leak.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
+        return problem(HttpStatus.CONFLICT, "Conflict",
+                "The request conflicts with existing data.", "data-conflict", ex);
+    }
+
     /** The {@code @Version} column doing its job. 409 tells the client to re-read and retry. */
     @ExceptionHandler(OptimisticLockingFailureException.class)
     ProblemDetail handleOptimisticLock(OptimisticLockingFailureException ex) {
-        log.warn("optimistic lock conflict: {}", ex.getMessage());
         return problem(HttpStatus.CONFLICT, "Concurrent modification",
                 "The resource was modified by another request. Re-read it and try again.",
-                "concurrent-modification");
+                "concurrent-modification", ex);
     }
 
     /** Lock wait timeout: transient, so advertise a retry. */
     @ExceptionHandler(PessimisticLockingFailureException.class)
     ResponseEntity<ProblemDetail> handlePessimisticLock(PessimisticLockingFailureException ex) {
-        log.warn("lock acquisition failed: {}", ex.getMessage());
         ProblemDetail problem = problem(HttpStatus.SERVICE_UNAVAILABLE, "Resource busy",
-                "Could not acquire a lock in time. Please retry.", "resource-busy");
+                "Could not acquire a lock in time. Please retry.", "resource-busy", ex);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .header(HttpHeaders.RETRY_AFTER, "1")
                 .body(problem);
@@ -94,7 +108,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(CallNotPermittedException.class)
     ResponseEntity<ProblemDetail> handleBreakerOpen(CallNotPermittedException ex) {
         ProblemDetail problem = problem(HttpStatus.SERVICE_UNAVAILABLE, "Dependency unavailable",
-                "A downstream dependency is unavailable. Please retry shortly.", "dependency-unavailable");
+                "A downstream dependency is unavailable. Please retry shortly.", "dependency-unavailable", ex);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .header(HttpHeaders.RETRY_AFTER, "5")
                 .body(problem);
@@ -102,19 +116,19 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(PermanentPaymentException.class)
     ProblemDetail handlePaymentRejected(PermanentPaymentException ex) {
-        return problem(HttpStatus.BAD_GATEWAY, "Payment rejected", ex.getMessage(), "payment-rejected");
+        return problem(HttpStatus.BAD_GATEWAY, "Payment rejected", ex.getMessage(), "payment-rejected", ex);
     }
 
     @ExceptionHandler(IllegalStateException.class)
     ProblemDetail handleIllegalState(IllegalStateException ex) {
-        return problem(HttpStatus.CONFLICT, "Invalid state transition", ex.getMessage(), "invalid-state");
+        return problem(HttpStatus.CONFLICT, "Invalid state transition", ex.getMessage(), "invalid-state", ex);
     }
 
     /** Violations on method parameters, as opposed to a request body. */
     @ExceptionHandler(ConstraintViolationException.class)
     ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
         ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Invalid request",
-                "One or more parameters are invalid.", "validation-failed");
+                "One or more parameters are invalid.", "validation-failed", ex);
         Map<String, String> errors = new LinkedHashMap<>();
         ex.getConstraintViolations().forEach(v -> errors.put(v.getPropertyPath().toString(), v.getMessage()));
         problem.setProperty("errors", errors);
@@ -129,12 +143,41 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Invalid request",
-                "The request body failed validation.", "validation-failed");
+                "The request body failed validation.", "validation-failed", ex);
         Map<String, String> errors = new LinkedHashMap<>();
         ex.getBindingResult().getFieldErrors()
                 .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
         ex.getBindingResult().getGlobalErrors()
                 .forEach(error -> errors.put(error.getObjectName(), error.getDefaultMessage()));
+        problem.setProperty("errors", errors);
+        return ResponseEntity.badRequest().body(problem);
+    }
+
+    /**
+     * Spring 6.1+ performs method validation on controller parameters WITHOUT
+     * {@code @Validated} on the class, and reports it as this exception rather than as
+     * {@code ConstraintViolationException}. Both paths exist, and which one you get depends on
+     * something as invisible as whether the class carries {@code @Validated}:
+     *
+     * <table border="1">
+     *   <caption>Which exception a bad path variable produces</caption>
+     *   <tr><th>Controller</th><th>Exception</th></tr>
+     *   <tr><td>{@code @Validated} on the class</td><td>{@code ConstraintViolationException}</td></tr>
+     *   <tr><td>no {@code @Validated}</td><td>{@code HandlerMethodValidationException}</td></tr>
+     * </table>
+     *
+     * Handle both, or removing one annotation silently changes your error contract.
+     */
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(
+            HandlerMethodValidationException ex, HttpHeaders headers, HttpStatusCode status,
+            WebRequest request) {
+        ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "Invalid request",
+                "One or more parameters are invalid.", "validation-failed", ex);
+        Map<String, String> errors = new LinkedHashMap<>();
+        ex.getAllValidationResults().forEach(result -> result.getResolvableErrors().forEach(error ->
+                errors.put(result.getMethodParameter().getParameterName(),
+                        error.getDefaultMessage())));
         problem.setProperty("errors", errors);
         return ResponseEntity.badRequest().body(problem);
     }
@@ -146,13 +189,32 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     ProblemDetail handleUnexpected(Exception ex) {
-        log.error("unhandled exception", ex);
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error",
                 "An unexpected error occurred. Quote the correlation id when contacting support.",
-                "internal-error");
+                "internal-error", ex);
     }
 
-    private ProblemDetail problem(HttpStatus status, String title, String detail, String type) {
+    /**
+     * Log-level discipline, in one place.
+     *
+     * <p>The rule: <b>4xx is the client's problem, 5xx is yours.</b> A 404 logged at ERROR with a
+     * stack trace trains everyone to ignore ERROR, and a 500 logged at DEBUG means you find out
+     * from a customer. Equally important is what this method does NOT do - it does not log and
+     * rethrow. Every exception here is terminal: it is being turned into a response, so it is
+     * logged exactly once. "Log and rethrow" is how one failure becomes five stack traces that
+     * look like five failures.
+     */
+    private void logByStatus(HttpStatus status, Exception ex) {
+        if (status.is5xxServerError()) {
+            log.error("{} -> {}", ex.getClass().getSimpleName(), status, ex);
+        } else if (log.isDebugEnabled()) {
+            log.debug("{} -> {}: {}", ex.getClass().getSimpleName(), status, ex.getMessage());
+        }
+    }
+
+    private ProblemDetail problem(HttpStatus status, String title, String detail, String type,
+            Exception ex) {
+        logByStatus(status, ex);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setTitle(title);
         problem.setType(URI.create(TYPE_PREFIX + type));

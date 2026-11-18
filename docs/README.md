@@ -19,6 +19,7 @@ Two kinds of page, deliberately separated:
 | 06 | [Testing](06-testing.md) | choosing a test scope, and why the suite is slow |
 | 08 | [The five HTTP clients](08-http-clients.md) | RestTemplate vs RestClient vs WebClient vs @HttpExchange vs Feign - and where each one hides its timeouts |
 | 09 | [Extension points and filters](09-extension-points.md) | the BeanPostProcessor family, writing your own @Enable*, and the filter chain |
+| 10 | [Exception handling](10-exception-handling.md) | where exceptions can be caught, RFC 7807, choosing a status, what must never leak |
 | 07 | [Production checklist](07-production-checklist.md) | before you ship |
 
 ## Reference
@@ -26,6 +27,7 @@ Two kinds of page, deliberately separated:
 | Page | Covers | Shape |
 | --- | --- | --- |
 | [annotations.md](reference/annotations.md) | the mental model for *who processes an annotation*, then every family with its traps, a look-alikes table and the proxy-defeated cheat sheet | prose, read it |
+| [annotations-expanded.md](reference/annotations-expanded.md) | what each annotation *expands to*: the longhand code Spring writes for you, from `@SpringBootApplication` down to `@Valid`. Compositions read out of the bytecode, not from memory | code, compare it |
 | [annotations-index.md](reference/annotations-index.md) | 258 annotations A-Z: exact package, one line, and whether this project uses it. Plus the 24 names that are ambiguous on this classpath, and a "I want to... / use this" finder | table, look it up ([generated](reference/_generator/README.md)) |
 
 ## How the code and the docs line up
@@ -38,6 +40,7 @@ Guide 05  <->  payments/**, config/RetryConfig           (+ PaymentRetryIntegrat
 Guide 06  <->  src/test/**
 Guide 08  <->  clients/**, config/ClientsConfig              (+ CatalogClientComparisonTest, 4 assertions)
 Guide 09  <->  support/extension/**, web/filter/**           (+ ExtensionPointsTest, FilterChainTest)
+Guide 10  <->  api/ApiExceptionHandler, domain/*Exception     (+ ErrorContractTest, 11 assertions)
 ```
 
 ## Reading order if you have an hour
