@@ -1,0 +1,46 @@
+# Test profile. Deliberately explicit: a test that depends on dev defaults is a test that breaks
+# when someone edits application-dev.yml.
+spring:
+  jpa:
+    hibernate:
+      # Flyway still owns the schema in integration tests, so `validate` keeps the migrations and
+      # the entity mappings honest. If this fails, a migration and an @Entity have drifted apart -
+      # exactly the failure you want in CI rather than at deploy time.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    # Each test class gets a clean database: H2 in-memory with a unique name per run.
+    clean-disabled: false
+
+app:
+  datasource:
+    primary:
+      url: jdbc:h2:mem:orders-test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    replica:
+      url: jdbc:h2:mem:orders-test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+  payments:
+    base-url: http://localhost:1/payments   # overridden per test via @DynamicPropertySource
+    max-attempts: 3
+    initial-backoff-millis: 20
+    backoff-multiplier: 2.0
+    max-backoff-millis: 100
+  catalog:
+    base-url: http://localhost:1/catalog   # overridden per test via @DynamicPropertySource
+
+  outbox:
+    # The scheduled poller would race with assertions.
+    publisher-enabled: false
+
+platform:
+  http:
+    connect-timeout: 200ms
+    read-timeout: 500ms
+    log-requests: false
+
+logging:
+  level:
+    root: WARN
+    com.example: INFO
+    org.springframework.transaction.interceptor: INFO

@@ -1,0 +1,264 @@
+SpringBootApplication|org.springframework.boot.autoconfigure|@SpringBootConfiguration + @EnableAutoConfiguration + @ComponentScan of this package down
+SpringBootConfiguration|org.springframework.boot|Marks THE configuration root; tests locate it by walking up the package tree
+EnableAutoConfiguration|org.springframework.boot.autoconfigure|Imports every class listed in every AutoConfiguration.imports, then filters by condition
+AutoConfiguration|org.springframework.boot.autoconfigure|A @Configuration processed after user config, orderable via before/after; must be listed in .imports
+AutoConfigureBefore|org.springframework.boot.autoconfigure|Standalone ordering hint, for when you cannot use @AutoConfiguration(before=...)
+AutoConfigureAfter|org.springframework.boot.autoconfigure|As above, the other direction
+AutoConfigureOrder|org.springframework.boot.autoconfigure|Coarse ordering between auto-configurations; before/after wins over it
+Configuration|org.springframework.context.annotation|Bean-defining class. proxyBeanMethods=false skips the CGLIB proxy (inter-bean calls make new objects)
+ComponentScan|org.springframework.context.annotation|Scan for stereotypes. Defaults to the annotated class's package and below
+Component|org.springframework.stereotype|The base stereotype; found only by component scanning, so never use it in a library
+Service|org.springframework.stereotype|@Component, purely semantic
+Repository|org.springframework.stereotype|@Component + JDBC/JPA exception translation into DataAccessException
+Controller|org.springframework.stereotype|@Component handling web requests
+RestController|org.springframework.web.bind.annotation|@Controller + @ResponseBody on every method
+Bean|org.springframework.context.annotation|Factory method. Bean name = method name. Must be static for a BeanPostProcessor or a binding converter
+Import|org.springframework.context.annotation|Pull in a @Configuration, ImportSelector or registrar - and its nested components too
+ImportResource|org.springframework.context.annotation|Pull in XML bean definitions
+ImportAutoConfiguration|org.springframework.boot.autoconfigure|Apply specific auto-configurations; the escape hatch for slice tests
+PropertySource|org.springframework.context.annotation|Add a properties file to the Environment (no YAML support)
+Autowired|org.springframework.beans.factory.annotation|Inject. Implicit on a single constructor since 4.3, so modern code rarely writes it
+Qualifier|org.springframework.beans.factory.annotation|Pick a specific bean by name when several share a type
+Primary|org.springframework.context.annotation|Default candidate when several beans share a type
+Fallback|org.springframework.context.annotation|Inverse of @Primary - considered only if nothing else matches (Spring 6.2+)
+Lazy|org.springframework.context.annotation|Defer creation to first use; the honest fix for a self-reference
+Scope|org.springframework.context.annotation|singleton/prototype/request/session. A prototype in a singleton is wired ONCE
+Order|org.springframework.core.annotation|Order beans in an injected List. LOWER value = more important / more outer
+Profile|org.springframework.context.annotation|Register only for these profiles; supports !dev, and dev or test
+Value|org.springframework.beans.factory.annotation|Inject one property or SpEL. No validation, no completion, no configprops
+DependsOn|org.springframework.context.annotation|Force initialisation order between beans. Usually a smell
+Role|org.springframework.context.annotation|Hint that a bean is infrastructure rather than application code
+Description|org.springframework.context.annotation|Human-readable bean description, shown in tooling
+PostConstruct|jakarta.annotation|Per-bean init, BEFORE the context is refreshed - do not touch other beans here
+PreDestroy|jakarta.annotation|Per-bean cleanup on shutdown
+Resource|jakarta.annotation|Inject by NAME (contrast @Autowired, which is by type)
+Nullable|org.springframework.lang|May be null; drives IDE and Kotlin null-safety
+NonNull|org.springframework.lang|Must not be null
+Conditional|org.springframework.context.annotation|The general form: register only if your Condition#matches returns true
+ConditionalOnBean|org.springframework.boot.autoconfigure.condition|A bean of that type/name exists. Only trustworthy inside auto-configuration
+ConditionalOnMissingBean|org.springframework.boot.autoconfigure.condition|No such bean exists - what lets an application override a starter
+ConditionalOnClass|org.springframework.boot.autoconfigure.condition|The type is on the classpath; reference it only from the annotation
+ConditionalOnMissingClass|org.springframework.boot.autoconfigure.condition|The type is absent (takes a String, since you cannot import it)
+ConditionalOnProperty|org.springframework.boot.autoconfigure.condition|Property matches; matchIfMissing=true means on-unless-told-otherwise
+ConditionalOnResource|org.springframework.boot.autoconfigure.condition|A classpath or filesystem resource exists
+ConditionalOnWebApplication|org.springframework.boot.autoconfigure.condition|type = SERVLET / REACTIVE / ANY
+ConditionalOnNotWebApplication|org.springframework.boot.autoconfigure.condition|Plain (non-web) context only
+ConditionalOnExpression|org.springframework.boot.autoconfigure.condition|SpEL is true. Last resort - unreportable and hard to test
+ConditionalOnJava|org.springframework.boot.autoconfigure.condition|JVM version range
+ConditionalOnThreading|org.springframework.boot.autoconfigure.condition|PLATFORM or VIRTUAL threads (Boot 3.2+)
+ConditionalOnSingleCandidate|org.springframework.boot.autoconfigure.condition|Exactly one candidate, or one marked @Primary
+ConditionalOnAvailableEndpoint|org.springframework.boot.actuate.autoconfigure.endpoint.condition|The actuator endpoint is enabled and exposed
+ConfigurationProperties|org.springframework.boot.context.properties|Bind a whole prefix onto a type, with relaxed binding
+ConfigurationPropertiesScan|org.springframework.boot.context.properties|Scan for @ConfigurationProperties types so they need no other annotation
+EnableConfigurationProperties|org.springframework.boot.context.properties|Register specific properties types - what a LIBRARY must use
+ConfigurationPropertiesBinding|org.springframework.boot.context.properties|Mark a Converter as usable by the binder; declare it static, in its own class
+ConstructorBinding|org.springframework.boot.context.properties.bind|Pick the binding constructor. CONSTRUCTOR-only since Boot 3.0; inferred for records
+DefaultValue|org.springframework.boot.context.properties.bind|Default for a constructor-bound parameter
+Name|org.springframework.boot.context.properties.bind|Bind a differently-named property onto a parameter
+NestedConfigurationProperty|org.springframework.boot.context.properties|Tell the metadata generator a field is a nested group, not a value
+DeprecatedConfigurationProperty|org.springframework.boot.context.properties|Mark a property deprecated in the generated metadata
+DurationUnit|org.springframework.boot.convert|Unit for a bare number bound to a Duration (so 5 means 5s)
+DataSizeUnit|org.springframework.boot.convert|Unit for a bare number bound to a DataSize
+PeriodUnit|org.springframework.boot.convert|Unit for a bare number bound to a Period
+Delimiter|org.springframework.boot.convert|Change the split character for collection binding
+Validated|org.springframework.validation.annotation|Two jobs: validate bound properties at startup, AND enable method validation
+Valid|jakarta.validation|CASCADE validation into this object or each element of this collection
+NotNull|jakarta.validation.constraints|Not null. Note "" and "  " both pass
+NotEmpty|jakarta.validation.constraints|Not null and size > 0. Note "  " passes
+NotBlank|jakarta.validation.constraints|Not null and trimmed length > 0 - the one you want for strings
+Size|jakarta.validation.constraints|String/collection/map length bounds
+Min|jakarta.validation.constraints|Numeric lower bound (integral)
+Max|jakarta.validation.constraints|Numeric upper bound (integral)
+Positive|jakarta.validation.constraints|> 0
+PositiveOrZero|jakarta.validation.constraints|>= 0
+Negative|jakarta.validation.constraints|< 0
+NegativeOrZero|jakarta.validation.constraints|<= 0
+DecimalMin|jakarta.validation.constraints|BigDecimal lower bound, with inclusive - the right pair for money
+DecimalMax|jakarta.validation.constraints|BigDecimal upper bound, with inclusive
+Digits|jakarta.validation.constraints|Max integer and fraction digits
+Pattern|jakarta.validation.constraints|Regex; anchored to the whole value
+Email|jakarta.validation.constraints|An email-shaped string. Permissive by design, not a deliverability check
+Past|jakarta.validation.constraints|Temporal strictly in the past
+PastOrPresent|jakarta.validation.constraints|Temporal not in the future
+Future|jakarta.validation.constraints|Temporal strictly in the future
+FutureOrPresent|jakarta.validation.constraints|Temporal not in the past
+AssertTrue|jakarta.validation.constraints|Boolean must be true - the hook for a cross-field rule on a getter
+AssertFalse|jakarta.validation.constraints|Boolean must be false
+Constraint|jakarta.validation|Meta-annotation that declares your own constraint plus its ConstraintValidator
+RequestMapping|org.springframework.web.bind.annotation|Map a URL; narrow with params/headers/consumes/produces
+GetMapping|org.springframework.web.bind.annotation|GET shortcut
+PostMapping|org.springframework.web.bind.annotation|POST shortcut
+PutMapping|org.springframework.web.bind.annotation|PUT shortcut
+PatchMapping|org.springframework.web.bind.annotation|PATCH shortcut
+DeleteMapping|org.springframework.web.bind.annotation|DELETE shortcut
+PathVariable|org.springframework.web.bind.annotation|Bind a URI template segment
+RequestParam|org.springframework.web.bind.annotation|Bind a query or form parameter; defaultValue implies required=false
+RequestBody|org.springframework.web.bind.annotation|Deserialise the body; pair with @Valid or nothing is validated
+ResponseBody|org.springframework.web.bind.annotation|Serialise the return value instead of resolving a view
+RequestHeader|org.springframework.web.bind.annotation|Bind a request header
+CookieValue|org.springframework.web.bind.annotation|Bind a cookie
+RequestPart|org.springframework.web.bind.annotation|Bind a multipart part
+RequestAttribute|org.springframework.web.bind.annotation|Bind a servlet request attribute (often set by a filter)
+SessionAttribute|org.springframework.web.bind.annotation|Bind a session attribute
+SessionAttributes|org.springframework.web.bind.annotation|Keep named model attributes in the session (classic MVC)
+ModelAttribute|org.springframework.web.bind.annotation|Bind many request parameters onto an object, or pre-populate the model
+MatrixVariable|org.springframework.web.bind.annotation|Bind a matrix URI variable; off unless you enable matrix parsing
+ResponseStatus|org.springframework.web.bind.annotation|Fixed status for a handler or an exception class; scatters your status mapping
+ExceptionHandler|org.springframework.web.bind.annotation|Handle an exception type; most specific wins, controller beats advice
+ControllerAdvice|org.springframework.web.bind.annotation|Global @ExceptionHandler/@InitBinder/@ModelAttribute
+RestControllerAdvice|org.springframework.web.bind.annotation|@ControllerAdvice + @ResponseBody
+InitBinder|org.springframework.web.bind.annotation|Customise the WebDataBinder for one controller
+CrossOrigin|org.springframework.web.bind.annotation|Per-handler CORS; prefer central config in a WebMvcConfigurer
+PageableDefault|org.springframework.data.web|Default and MAX page size for a Pageable parameter
+SortDefault|org.springframework.data.web|Default sort for a Sort parameter
+HttpExchange|org.springframework.web.service.annotation|Declare an HTTP interface client, realised by HttpServiceProxyFactory
+GetExchange|org.springframework.web.service.annotation|GET on an HTTP interface
+PostExchange|org.springframework.web.service.annotation|POST on an HTTP interface
+PutExchange|org.springframework.web.service.annotation|PUT on an HTTP interface
+PatchExchange|org.springframework.web.service.annotation|PATCH on an HTTP interface
+DeleteExchange|org.springframework.web.service.annotation|DELETE on an HTTP interface
+Entity|jakarta.persistence|A persistent type; needs a no-arg constructor and a non-final class
+Table|jakarta.persistence|Table name, schema, indexes, unique constraints
+Id|jakarta.persistence|Primary key
+IdClass|jakarta.persistence|Composite key held in a separate class
+EmbeddedId|jakarta.persistence|Composite key held in an @Embeddable
+Embeddable|jakarta.persistence|A value type mapped into the owner's table
+Embedded|jakarta.persistence|Use an @Embeddable here
+GeneratedValue|jakarta.persistence|IDENTITY disables insert batching; prefer SEQUENCE with a pooled allocation size
+SequenceGenerator|jakarta.persistence|Name, sequence and allocationSize for SEQUENCE ids
+Column|jakarta.persistence|nullable, length, precision/scale, updatable, insertable - all checked by ddl-auto=validate
+JoinColumn|jakarta.persistence|The foreign-key column, on the owning side
+JoinTable|jakarta.persistence|The join table for a many-to-many or unidirectional one-to-many
+Version|jakarta.persistence|Optimistic locking; Hibernate adds WHERE version = ? to every UPDATE
+Enumerated|jakarta.persistence|Always EnumType.STRING - ORDINAL silently re-maps rows when the enum grows
+Temporal|jakarta.persistence|Legacy Date/Calendar precision; unnecessary with java.time
+Transient|jakarta.persistence|Not persisted
+Lob|jakarta.persistence|CLOB/BLOB; maps differently per driver, so a sized varchar is more portable
+Basic|jakarta.persistence|Explicit fetch/optional on a simple column
+MappedSuperclass|jakarta.persistence|Share mappings with no table and no queryability
+Inheritance|jakarta.persistence|SINGLE_TABLE / JOINED / TABLE_PER_CLASS for a real type hierarchy
+DiscriminatorColumn|jakarta.persistence|The type column for SINGLE_TABLE
+DiscriminatorValue|jakarta.persistence|This subclass's discriminator value
+EntityListeners|jakarta.persistence|Attach lifecycle callbacks, e.g. Spring Data's AuditingEntityListener
+OneToMany|jakarta.persistence|LAZY by default; mappedBy marks the non-owning side
+ManyToOne|jakarta.persistence|EAGER by DEFAULT - always write fetch = LAZY. optional=false enables proxies
+OneToOne|jakarta.persistence|EAGER by default, and the hardest association to make lazy
+ManyToMany|jakarta.persistence|Needs a join table; often better modelled as an explicit entity
+ElementCollection|jakarta.persistence|A collection of values rather than entities
+CollectionTable|jakarta.persistence|The table behind an @ElementCollection
+OrderBy|jakarta.persistence|Order a collection with an ORDER BY at load time
+OrderColumn|jakarta.persistence|Persist list order in a dedicated column
+NamedEntityGraph|jakarta.persistence|A reusable, named fetch plan
+NamedQuery|jakarta.persistence|A named JPQL query, validated at startup
+PrePersist|jakarta.persistence|Callback before INSERT
+PostPersist|jakarta.persistence|Callback after INSERT
+PreUpdate|jakarta.persistence|Callback before UPDATE
+PostLoad|jakarta.persistence|Callback after load
+PreRemove|jakarta.persistence|Callback before DELETE
+Convert|jakarta.persistence|Apply an AttributeConverter to this attribute
+Converter|jakarta.persistence|Declare an AttributeConverter; autoApply=true applies it to every matching type
+PersistenceContext|jakarta.persistence|Inject a transaction-scoped EntityManager PROXY (never @Autowired EntityManager)
+QueryHint|jakarta.persistence|One hint, e.g. jakarta.persistence.lock.timeout
+BatchSize|org.hibernate.annotations|Fetch lazy associations in batches: N+1 becomes N/size + 1
+Formula|org.hibernate.annotations|A read-only computed column from a SQL fragment
+Filter|org.hibernate.annotations|Apply a named, parameterised filter to loads
+NaturalId|org.hibernate.annotations|Mark the business key; enables byNaturalId() lookups
+DynamicUpdate|org.hibernate.annotations|UPDATE only changed columns - useful for wide tables, costs plan caching
+DynamicInsert|org.hibernate.annotations|INSERT only non-null columns
+SQLRestriction|org.hibernate.annotations|Always-applied SQL predicate (the 6.3+ replacement for @Where)
+CreationTimestamp|org.hibernate.annotations|Hibernate's own created-at; do not combine with Spring Data auditing
+UpdateTimestamp|org.hibernate.annotations|Hibernate's own updated-at
+Immutable|org.hibernate.annotations|Entity/collection is read-only; Hibernate skips dirty checking
+Query|org.springframework.data.jpa.repository|JPQL, or SQL with nativeQuery=true; add countQuery for paging
+Param|org.springframework.data.repository.query|Bind a method parameter to a named query parameter
+Modifying|org.springframework.data.jpa.repository|Required for UPDATE/DELETE; set flushAutomatically AND clearAutomatically
+EntityGraph|org.springframework.data.jpa.repository|Declarative fetch plan - the clean fix for N+1 on one aggregate
+Lock|org.springframework.data.jpa.repository|PESSIMISTIC_WRITE issues SELECT ... FOR UPDATE
+QueryHints|org.springframework.data.jpa.repository|Attach @QueryHint values to a repository method
+Procedure|org.springframework.data.jpa.repository.query|Call a stored procedure
+CreatedDate|org.springframework.data.annotation|Auditing: set on insert
+LastModifiedDate|org.springframework.data.annotation|Auditing: set on every write
+CreatedBy|org.springframework.data.annotation|Auditing: from AuditorAware, on insert
+LastModifiedBy|org.springframework.data.annotation|Auditing: from AuditorAware, on every write
+EnableJpaAuditing|org.springframework.data.jpa.repository.config|Turn auditing on; keep it in a tiny config class so slice tests can import it
+EnableJpaRepositories|org.springframework.data.jpa.repository.config|REPLACES the auto-configured repository packages - list them all
+EntityScan|org.springframework.boot.autoconfigure.domain|REPLACES the auto-configured entity packages - list them all
+FlywayDataSource|org.springframework.boot.autoconfigure.flyway|Migrate THIS DataSource, not the @Primary one
+Transactional|org.springframework.transaction.annotation|Declarative transaction. NOT the jakarta one. Public methods only; checked exceptions COMMIT
+EnableTransactionManagement|org.springframework.transaction.annotation|Register the transaction advisor (Boot does this for you)
+TransactionalEventListener|org.springframework.transaction.event|Handle an event at a transaction phase; a write here needs REQUIRES_NEW
+EventListener|org.springframework.context.event|Handle an event synchronously, inside the publisher's transaction
+Cacheable|org.springframework.cache.annotation|Look up first; on a miss call the method and store. condition sees args, unless sees #result
+CachePut|org.springframework.cache.annotation|Always call, always store
+CacheEvict|org.springframework.cache.annotation|Remove one key, or allEntries=true. Fires on return, NOT on commit
+Caching|org.springframework.cache.annotation|Combine several cache annotations on one method
+CacheConfig|org.springframework.cache.annotation|Class-level cache defaults
+EnableCaching|org.springframework.cache.annotation|Register the caching advisor
+Async|org.springframework.scheduling.annotation|Run on another thread. Default executor is UNBOUNDED; ThreadLocals do not follow
+EnableAsync|org.springframework.scheduling.annotation|Register the async advisor
+Scheduled|org.springframework.scheduling.annotation|fixedDelay measures from the END of the last run; fixedRate from its start
+Schedules|org.springframework.scheduling.annotation|Several @Scheduled on one method
+EnableScheduling|org.springframework.scheduling.annotation|Start the scheduler (default pool size is ONE)
+Aspect|org.aspectj.lang.annotation|Declare an aspect class; it still has to be a bean
+Before|org.aspectj.lang.annotation|Advice before the join point
+After|org.aspectj.lang.annotation|Advice after, regardless of outcome
+AfterReturning|org.aspectj.lang.annotation|Advice after a normal return, with access to the value
+AfterThrowing|org.aspectj.lang.annotation|Advice after an exception
+Around|org.aspectj.lang.annotation|Wrap the call; you MUST proceed() and MUST rethrow
+Pointcut|org.aspectj.lang.annotation|Name a reusable pointcut expression
+DeclareParents|org.aspectj.lang.annotation|Introduce an interface into existing types (mixins)
+EnableAspectJAutoProxy|org.springframework.context.annotation|Enable AOP proxying; exposeProxy=true enables AopContext.currentProxy()
+Retryable|org.springframework.retry.annotation|Retry on listed exceptions with @Backoff; needs @EnableRetry
+Recover|org.springframework.retry.annotation|Fallback once attempts are exhausted; matched by exception type AND argument list
+Backoff|org.springframework.retry.annotation|delay, multiplier, maxDelay, random (jitter - not optional at scale)
+EnableRetry|org.springframework.retry.annotation|Register the retry advisor
+CircuitBreaker|io.github.resilience4j.circuitbreaker.annotation|Fail fast while open; configured by instance name in application.yml
+Bulkhead|io.github.resilience4j.bulkhead.annotation|Cap concurrent calls so one slow dependency cannot take every thread
+RateLimiter|io.github.resilience4j.ratelimiter.annotation|Cap call rate
+TimeLimiter|io.github.resilience4j.timelimiter.annotation|Time-box a CompletionStage call
+Retry|io.github.resilience4j.retry.annotation|Resilience4j's own retry - do NOT stack it with spring-retry's @Retryable
+Endpoint|org.springframework.boot.actuate.endpoint.annotation|A custom /actuator/<id> over HTTP and JMX
+WebEndpoint|org.springframework.boot.actuate.endpoint.web.annotation|HTTP only
+JmxEndpoint|org.springframework.boot.actuate.endpoint.jmx.annotation|JMX only
+ReadOperation|org.springframework.boot.actuate.endpoint.annotation|Maps to GET
+WriteOperation|org.springframework.boot.actuate.endpoint.annotation|Maps to POST, parameters from the JSON body
+DeleteOperation|org.springframework.boot.actuate.endpoint.annotation|Maps to DELETE
+Selector|org.springframework.boot.actuate.endpoint.annotation|A path segment: /actuator/platform/audit
+EndpointExtension|org.springframework.boot.actuate.endpoint.annotation|Add operations to an existing endpoint
+Timed|io.micrometer.core.annotation|Record a Timer; needs a TimedAspect bean (not auto-configured)
+Counted|io.micrometer.core.annotation|Record a Counter; needs a CountedAspect bean
+Observed|io.micrometer.observation.annotation|One annotation, a metric AND a span; needs an ObservedAspect bean
+SpringBootTest|org.springframework.boot.test.context|Load the whole context; webEnvironment = MOCK/RANDOM_PORT/DEFINED_PORT/NONE
+WebMvcTest|org.springframework.boot.test.autoconfigure.web.servlet|MVC slice: no DataSource, and your own starters are off
+DataJpaTest|org.springframework.boot.test.autoconfigure.orm.jpa|JPA slice; each test is a rolled-back transaction, so flush()/clear() matter
+JdbcTest|org.springframework.boot.test.autoconfigure.jdbc|JdbcTemplate slice, no JPA
+JsonTest|org.springframework.boot.test.autoconfigure.json|Serialisation slice
+RestClientTest|org.springframework.boot.test.autoconfigure.web.client|Client slice with MockRestServiceServer (which replaces the transport)
+TestConfiguration|org.springframework.boot.test.context|Extra test beans; EXCLUDED from component scanning, unlike @Configuration
+MockitoBean|org.springframework.test.context.bean.override.mockito|Replace a bean with a mock (Boot 3.4+); changes the context cache key
+MockitoSpyBean|org.springframework.test.context.bean.override.mockito|Wrap the real bean in a spy
+TestBean|org.springframework.test.context.bean.override.convention|Replace a bean with a static factory method's result, no Mockito
+MockBean|org.springframework.boot.test.mock.mockito|DEPRECATED - use @MockitoBean
+SpyBean|org.springframework.boot.test.mock.mockito|DEPRECATED - use @MockitoSpyBean
+ActiveProfiles|org.springframework.test.context|Profiles for the test context; part of the cache key
+TestPropertySource|org.springframework.test.context|Static property overrides; part of the cache key
+DynamicPropertySource|org.springframework.test.context|STATIC method taking a DynamicPropertyRegistry, evaluated before the context is built
+Sql|org.springframework.test.context.jdbc|Run SQL scripts before or after a test method
+SqlGroup|org.springframework.test.context.jdbc|Several @Sql on one element
+DirtiesContext|org.springframework.test.annotation|Evict the cached context - last resort, everything after it pays
+AutoConfigureTestDatabase|org.springframework.boot.test.autoconfigure.jdbc|Swap in an embedded DB; replace=NONE keeps the real one
+AutoConfigureMockMvc|org.springframework.boot.test.autoconfigure.web.servlet|Add MockMvc to a @SpringBootTest
+LocalServerPort|org.springframework.boot.test.web.server|The actual port - injected AFTER the context is built, so too late for a bean's constructor
+LocalManagementPort|org.springframework.boot.test.web.server|The actual actuator port
+ContextConfiguration|org.springframework.test.context|Low-level control of what the test context loads
+TestExecutionListeners|org.springframework.test.context|Add or replace TestExecutionListeners
+Commit|org.springframework.test.annotation|Commit a @Transactional test instead of rolling it back
+Rollback|org.springframework.test.annotation|Explicit rollback control for a @Transactional test
+Audited|com.example.platform.audit|THIS PROJECT: records an audit entry around the method; the worked example of a custom annotation + aspect
+CurrentActor|com.example.orders.api|THIS PROJECT: injects the calling actor into a handler parameter, via a HandlerMethodArgumentResolver
+FeignClient|org.springframework.cloud.openfeign|Declare an OpenFeign client; name is a discovery id, url= pins it. Has its OWN timeouts and Retryer
+EnableFeignClients|org.springframework.cloud.openfeign|Scan for @FeignClient interfaces; without it the interface is just an interface
+Sku|com.example.orders.api.validation|THIS PROJECT: custom field constraint - the worked example of @Constraint + ConstraintValidator
+NoDuplicateSkus|com.example.orders.api.validation|THIS PROJECT: custom CLASS-level constraint, for a rule no single field can see
+Monitored|com.example.orders.support.extension|THIS PROJECT: marks a bean for TimingBeanPostProcessor to wrap in a proxy
+EnableGreeters|com.example.orders.support.extension|THIS PROJECT: a home-made @Enable* - shows that every @Enable is just @Import

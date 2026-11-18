@@ -1,0 +1,37 @@
+# Run a real database:
+#   docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=orders -e POSTGRES_DB=orders postgres:16
+#   mvn spring-boot:run -Dspring-boot.run.profiles=postgres
+#
+# Note the two URLs: in a real deployment the replica points at a read-only endpoint
+# (RDS reader, Patroni replica, pgpool). The routing DataSource then sends every
+# @Transactional(readOnly = true) method there.
+app:
+  datasource:
+    primary:
+      url: jdbc:postgresql://localhost:5432/orders
+      username: postgres
+      password: orders
+      driver-class-name: org.postgresql.Driver
+      hikari:
+        maximum-pool-size: 10
+        # PostgreSQL-specific: let the driver cache server-side prepared statements.
+        data-source-properties:
+          prepareThreshold: 3
+          preparedStatementCacheQueries: 256
+    replica:
+      url: jdbc:postgresql://localhost:5432/orders
+      username: postgres
+      password: orders
+      driver-class-name: org.postgresql.Driver
+      hikari:
+        maximum-pool-size: 5
+        read-only: true
+spring:
+  jpa:
+    properties:
+      hibernate:
+        # Only set a dialect explicitly if you must; Hibernate 6 detects it correctly and a wrong
+        # explicit dialect produces subtly wrong SQL.
+        jdbc:
+          lob:
+            non_contextual_creation: true

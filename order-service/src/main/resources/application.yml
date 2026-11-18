@@ -1,0 +1,285 @@
+# ======================================================================================
+# order-service configuration
+#
+# Precedence (highest first, abridged): command-line args > SPRING_APPLICATION_JSON >
+# OS environment > profile-specific files > this file > @PropertySource > defaults set in
+# code (SpringApplication.setDefaultProperties / our EnvironmentPostProcessor).
+# Full order: docs "Externalized Configuration". Knowing it ends 90% of "why is my value
+# not applied" conversations.
+#
+# Relaxed binding means app.payments.base-url, app.payments.baseUrl and APP_PAYMENTS_BASEURL
+# are the same key. In Kubernetes always use the SCREAMING_SNAKE_CASE form in env vars.
+# ======================================================================================
+spring:
+  application:
+    name: order-service
+
+  # Profiles: `dev` is activated by default here; override with --spring.profiles.active=prod
+  # or SPRING_PROFILES_ACTIVE. Use profile groups when several profiles belong together.
+  profiles:
+    default: dev
+
+  jpa:
+    # Flyway owns the schema. `validate` makes Hibernate compare its mappings against the real
+    # tables at startup and FAIL if they disagree - the cheapest possible guard against a
+    # migration and an entity drifting apart. NEVER use `update` outside a toy project, and
+    # never `create-drop` against anything you care about.
+    hibernate:
+      ddl-auto: validate
+    # Keep the EntityManager open for the whole request? NO. It hides LazyInitializationException
+    # during development and then holds a database connection for the entire HTTP response,
+    # including JSON serialisation. Turn it off and map to DTOs inside the service transaction.
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        # Fail fast when a query would page in memory over a fetch join, instead of silently
+        # loading the whole table (HHH000104).
+        query:
+          fail_on_pagination_over_collection_fetch: true
+        # Statistics are useful locally; they cost ~5% so keep them off in production.
+        generate_statistics: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # A baseline lets you adopt Flyway on an existing database.
+    baseline-on-migrate: false
+    # Refuse to start if someone edited an already-applied migration. Default is true; stating it
+    # is a reminder that migrations are append-only, forever.
+    validate-on-migrate: true
+
+  jackson:
+    default-property-inclusion: non_null
+    deserialization:
+      fail-on-unknown-properties: true
+
+  task:
+    scheduling:
+      pool:
+        # Default is 1: one slow @Scheduled job delays every other one.
+        size: 4
+  mvc:
+    problemdetails:
+      # RFC 7807 bodies for Spring MVC's own exceptions too.
+      enabled: true
+
+  data:
+    web:
+      pageable:
+        default-page-size: 20
+        # Hard cap: without it a client can request size=1000000.
+        max-page-size: 100
+
+# ----------------------------------------------------------------------- datasources
+# Two pools behind one routing DataSource (see DataSourceConfig). Locally both point at the same
+# H2 database so the wiring is exercised without needing two servers.
+app:
+  datasource:
+    primary:
+      url: jdbc:h2:mem:orders;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+      username: sa
+      password: ""
+      driver-class-name: org.h2.Driver
+      hikari:
+        pool-name: primary-pool
+        # ------------------------------------------------------------------------------------
+        # auto-commit MUST be false here, and this is NOT optional.
+        #
+        # JpaConfig sets hibernate.connection.provider_disables_autocommit=true, which tells
+        # Hibernate "the pool already hands me connections with autocommit disabled, so do not
+        # bother calling setAutoCommit(false)". Hikari's default is autoCommit=TRUE. Combine the
+        # two and every statement commits as it executes: @Transactional rollback becomes a no-op
+        # and you only find out when a half-finished order survives a failure in production.
+        #
+        # The two settings are a PAIR. Set both, or neither.
+        # ------------------------------------------------------------------------------------
+        auto-commit: false
+        # Small is fast. Rule of thumb: (cores * 2) + effective spindles. Going from 10 to 100
+        # moves the queue from your app into the database and makes p99 worse, not better.
+        maximum-pool-size: 10
+        minimum-idle: 2
+        # Fail fast rather than piling up threads waiting for a connection.
+        connection-timeout: 3000
+        validation-timeout: 2000
+        idle-timeout: 600000
+        # MUST be shorter than any idle timeout enforced by the DB or a proxy in front of it.
+        max-lifetime: 1500000
+        # Logs a stack trace when a connection is held longer than this. Free money.
+        leak-detection-threshold: 20000
+    replica:
+      url: jdbc:h2:mem:orders;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+      username: sa
+      password: ""
+      driver-class-name: org.h2.Driver
+      hikari:
+        pool-name: replica-pool
+        auto-commit: false
+        maximum-pool-size: 5
+        minimum-idle: 1
+        connection-timeout: 3000
+        read-only: true
+
+  payments:
+    # Overridden per environment; the test profile points it at a local stub.
+    base-url: http://localhost:9090/payments
+    max-attempts: 3
+    initial-backoff-millis: 200
+    backoff-multiplier: 2.0
+    max-backoff-millis: 2000
+    jitter: true
+    max-retry-after: 5s
+
+  web:
+    # PayloadSizeLimitFilter rejects anything larger with 413, before Jackson allocates anything.
+    max-request-bytes: 1048576
+    # RequestResponseLoggingFilter is opt-in: useful locally, a PII leak in production.
+    request-logging: false
+    log-bodies: false
+
+  catalog:
+    # Served by CatalogStubController under the dev profile; see /api/clients/{sku}.
+    base-url: http://localhost:${server.port:8080}/stub/catalog
+
+  outbox:
+    publisher-enabled: true
+    batch-size: 50
+    poll-interval: 2000
+
+# ----------------------------------------------------------------------- platform starter
+# Keys served by platform-starter. IDE completion for these comes from the
+# spring-configuration-metadata.json generated by the configuration processor in that module.
+platform:
+  application-name: ${spring.application.name}
+  correlation:
+    enabled: true
+    header-name: X-Correlation-Id
+    echo-response-header: true
+  audit:
+    enabled: true
+    masked-fields: [password, token, cardNumber, idempotencyKey]
+    slow-call-threshold-millis: 500
+  http:
+    connect-timeout: 2s
+    # Must be >= connect-timeout, or PlatformAutoConfiguration refuses to start and the
+    # FailureAnalyzer explains why. Try setting it to 1ms to see that in action.
+    read-timeout: 5s
+    log-requests: true
+    api-key: ${PAYMENTS_API_KEY:}
+  startup-timing:
+    enabled: false
+    threshold-millis: 150
+
+# ----------------------------------------------------------------------- resilience4j
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        # COUNT_BASED: the last N calls. TIME_BASED: the last N seconds. Time-based is usually
+        # the better choice for low-traffic services, where a count window can be hours old.
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        # Without this, ONE failed call on a quiet endpoint = 100% failure rate = open breaker.
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        # Calls slower than this count as failures even when they succeed - a slow dependency is
+        # an outage with extra steps.
+        slow-call-duration-threshold: 3s
+        slow-call-rate-threshold: 60
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+    instances:
+      payments:
+        base-config: default
+        # Business outcomes must NOT open the breaker. Only infrastructure failures should.
+        ignore-exceptions:
+          - com.example.orders.payments.PaymentExceptions$PermanentPaymentException
+        record-exceptions:
+          - com.example.orders.payments.PaymentExceptions$TransientPaymentException
+          - java.io.IOException
+  bulkhead:
+    instances:
+      payments:
+        # Cap concurrent calls so one slow dependency cannot consume every request thread.
+        max-concurrent-calls: 20
+        max-wait-duration: 0
+  # Aspect order: HIGHER value = more outer. The default chain, outermost first, is
+  # Retry -> CircuitBreaker -> RateLimiter -> TimeLimiter -> Bulkhead, which already puts the
+  # breaker outside the bulkhead so that bulkhead rejections count towards opening it.
+  # Only some of these orders are settable (the bulkhead aspect order is read-only in
+  # resilience4j 2.3) - check for a setter before adding a key, or startup fails with
+  # "No setter found for property".
+  circuitbreaker.circuit-breaker-aspect-order: 2
+
+# ----------------------------------------------------------------------- actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        # Locally: everything. In production expose only what you need, on a separate port
+        # (management.server.port), and secure it.
+        include: health,info,metrics,prometheus,conditions,configprops,env,beans,mappings,flyway,caches,platform,threaddump,loggers
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+      # A custom status (PaymentGatewayHealthIndicator returns DEGRADED) must be given a place in
+      # the severity order and an HTTP mapping, otherwise the aggregator treats it as unknown and
+      # the overall status is whatever sorts first. Here DEGRADED is worse than UP but better than
+      # DOWN, and still answers 200 - a degraded service is serving traffic.
+      status:
+        order: DOWN,OUT_OF_SERVICE,DEGRADED,UP,UNKNOWN
+        http-mapping:
+          DEGRADED: 200
+      group:
+        # Readiness must only include what makes the service able to SERVE. Including an optional
+        # downstream dependency here means a partner outage takes your pods out of rotation.
+        readiness:
+          include: readinessState,db
+        liveness:
+          include: livenessState
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms,100ms,200ms,500ms,1s
+  observations:
+    key-values:
+      application: ${spring.application.name}
+
+server:
+  port: 8080
+  error:
+    # Never leak stack traces to clients.
+    include-stacktrace: never
+    include-message: always
+  # Graceful shutdown: stop accepting new requests, let in-flight ones finish. Pair with a
+  # preStop hook / terminationGracePeriodSeconds in Kubernetes.
+  shutdown: graceful
+  tomcat:
+    threads:
+      max: 100
+    # Reject requests rather than queueing them forever when the pool is saturated.
+    accept-count: 100
+
+spring.lifecycle.timeout-per-shutdown-phase: 20s
+
+logging:
+  level:
+    root: INFO
+    com.example: DEBUG
+    # Uncomment to see SQL and bound parameters. Never enable in production: bind parameters are
+    # PII, and the log volume is enormous.
+    # org.hibernate.SQL: DEBUG
+    # org.hibernate.orm.jdbc.bind: TRACE
+    # Shows which transaction is created, joined, suspended, committed or rolled back - the single
+    # most useful switch when debugging propagation.
+    # org.springframework.transaction.interceptor: TRACE
+    # org.springframework.orm.jpa.JpaTransactionManager: DEBUG
+  pattern:
+    # The correlation id put into the MDC by the platform starter's filter.
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{correlationId:-}] %logger{36} - %msg%n"

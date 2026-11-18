@@ -1,0 +1,25 @@
+Cacheable|org.springframework.cache.annotation|the JPA one configures the second-level cache and does NOT cache method results
+CircuitBreaker|io.github.resilience4j.circuitbreaker.annotation|spring-retry ships its own @CircuitBreaker; picking it silently gives you different semantics and no resilience4j config
+Convert|jakarta.persistence|the other is a shaded CSV-parser annotation dragged in by junit-params
+Email|jakarta.validation.constraints|the Hibernate Validator one is the deprecated pre-Jakarta copy
+Id|jakarta.persistence|Spring Data's @Id is for non-JPA stores (Mongo, Redis); in a JPA entity it does nothing
+Immutable|org.hibernate.annotations|for a read-only entity. Spring Data's is for its own model; the other two are internal
+Lazy|org.springframework.context.annotation|the other is Hibernate Validator internal
+NamedQuery|jakarta.persistence|Hibernate's own variant accepts native SQL and extra options
+NonNull|org.springframework.lang|every library ships one; mixing them confuses null-analysis tooling
+Nullable|org.springframework.lang|eight candidates on this classpath. Pick one convention per codebase and enforce it
+NotBlank|jakarta.validation.constraints|the Hibernate Validator one is the deprecated pre-Jakarta copy
+NotEmpty|jakarta.validation.constraints|the Hibernate Validator one is the deprecated pre-Jakarta copy
+NotNull|jakarta.validation.constraints|the others are nullability HINTS and enforce nothing at runtime - a classic silent-validation bug
+Order|org.springframework.core.annotation|JUnit's @Order orders test methods and needs @TestMethodOrder; it will not order beans
+OrderBy|jakarta.persistence|Hibernate's variant takes a raw SQL fragment instead of a property list
+Pattern|jakarta.validation.constraints|the others are an IDE hint and a Hibernate processor annotation
+Qualifier|org.springframework.beans.factory.annotation|jakarta.inject's works, but only with limited Spring semantics
+Scope|org.springframework.context.annotation|jakarta.inject's is a meta-annotation for defining scopes, not for applying one
+Table|jakarta.persistence|Hibernate's @Table configures a SECONDARY table; it does not rename the primary one
+Temporal|jakarta.persistence|Spring Data JPA's is for query derivation on temporal parameters
+Timed|io.micrometer.core.annotation|Spring's test @Timed fails a test that runs too long - nothing to do with metrics
+Transactional|org.springframework.transaction.annotation|the jakarta one has no propagation, isolation, readOnly or rollbackFor
+Transient|jakarta.persistence|Spring Data's @Transient is for non-JPA stores; Kotlin's is for serialisation
+Version|jakarta.persistence|Spring Data's @Version is for non-JPA stores and will not produce optimistic locking in JPA
+Param|org.springframework.data.repository.query|feign.Param names a template variable in a Feign client, Spring Data's binds a query parameter - and adding spring-cloud-openfeign is what makes this ambiguous

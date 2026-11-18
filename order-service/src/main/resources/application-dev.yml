@@ -1,0 +1,20 @@
+# Active by default (spring.profiles.default=dev). Everything here is intentionally unsafe for
+# production: an in-memory database, verbose logging, a fully-exposed actuator.
+spring:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+logging:
+  level:
+    com.example: DEBUG
+    # Handy while learning: shows every transaction decision.
+    org.springframework.transaction.interceptor: DEBUG
+app:
+  web:
+    request-logging: true
+    log-bodies: true
+  payments:
+    # Points at the stub shipped in the same application (see PaymentStubController), so the
+    # retry/backoff/circuit-breaker behaviour can be driven from a browser.
+    base-url: http://localhost:${server.port:8080}/stub/payments

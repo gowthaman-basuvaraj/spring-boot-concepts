@@ -1,0 +1,6 @@
+# One fully-qualified auto-configuration class per line. Since Boot 2.7/3.0 this file replaces the
+# EnableAutoConfiguration key in spring.factories. Nested @AutoConfiguration classes are discovered
+# through their enclosing class, so PlatformActuatorConfiguration does not need its own line.
+com.example.platform.autoconfigure.PlatformConversionAutoConfiguration
+com.example.platform.autoconfigure.PlatformAutoConfiguration
+com.example.platform.autoconfigure.PlatformHttpAutoConfiguration

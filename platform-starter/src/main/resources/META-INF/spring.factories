@@ -1,0 +1,6 @@
+# Boot SPIs that still live in spring.factories (everything except @AutoConfiguration).
+org.springframework.boot.env.EnvironmentPostProcessor=\
+com.example.platform.support.PlatformEnvironmentPostProcessor
+
+org.springframework.boot.diagnostics.FailureAnalyzer=\
+com.example.platform.support.PlatformFailureAnalyzer

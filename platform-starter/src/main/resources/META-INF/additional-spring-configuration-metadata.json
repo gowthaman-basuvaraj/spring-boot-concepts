@@ -1,0 +1,27 @@
+{
+  "properties": [
+    {
+      "name": "platform.startup-timing.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Log beans whose initialisation exceeds the threshold.",
+      "defaultValue": false
+    },
+    {
+      "name": "platform.startup-timing.threshold-millis",
+      "type": "java.lang.Long",
+      "description": "Bean initialisation time above which a bean is reported as slow.",
+      "defaultValue": 100
+    }
+  ],
+  "hints": [
+    {
+      "name": "platform.audit.masked-fields",
+      "values": [
+        { "value": "password" },
+        { "value": "token" },
+        { "value": "cardNumber" },
+        { "value": "ssn" }
+      ]
+    }
+  ]
+}

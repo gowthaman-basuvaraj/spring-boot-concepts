@@ -1,0 +1,60 @@
+# What changes for production. Nothing here is exotic - it is just the discipline that separates
+# a service that pages you at 3am from one that does not.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+        generate_statistics: false
+  flyway:
+    # Migrations as part of application startup is fine for a single-writer service. For many
+    # replicas, or for anything that takes locks, run them as a separate job/initContainer and
+    # set this to false.
+    enabled: true
+
+app:
+  datasource:
+    primary:
+      # Secrets come from the environment, never from a file in the image.
+      url: ${DB_URL}
+      username: ${DB_USERNAME}
+      password: ${DB_PASSWORD}
+    replica:
+      url: ${DB_REPLICA_URL:${DB_URL}}
+      username: ${DB_USERNAME}
+      password: ${DB_PASSWORD}
+  payments:
+    base-url: ${PAYMENTS_BASE_URL}
+
+platform:
+  http:
+    log-requests: false
+    api-key: ${PAYMENTS_API_KEY}
+
+management:
+  server:
+    # Actuator on its own port so it is not reachable from the internet-facing ingress.
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+  shutdown: graceful
+
+logging:
+  level:
+    root: INFO
+    com.example: INFO
+# Structured logging: Boot 3.4+ emits ECS/Logstash/GELF JSON natively - uncomment for a
+# collector-friendly format instead of the human-readable pattern.
+# logging.structured.format.console: ecs

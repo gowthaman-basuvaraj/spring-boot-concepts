@@ -1,0 +1,121 @@
+### A runnable request file (IntelliJ HTTP Client / VS Code REST Client).
+### The dev profile serves both the API and the flaky payment stub on the same port.
+@host = http://localhost:8080
+
+### --- payment stub control -------------------------------------------------
+### ok | flaky | down | throttled | declined | slow
+POST {{host}}/stub/payments/mode?value=ok
+
+###
+GET {{host}}/stub/payments/mode
+
+### --- orders ---------------------------------------------------------------
+### Place an order. 201 + Location; the charge happens after commit.
+POST {{host}}/api/orders
+Content-Type: application/json
+X-Actor: alice
+X-Correlation-Id: demo-0001
+
+{
+  "customerEmail": "alice@example.com",
+  "currency": "EUR",
+  "lines": [
+    { "sku": "SKU-LAPTOP", "quantity": 2, "unitPrice": 999.99 },
+    { "sku": "SKU-MOUSE", "quantity": 1, "unitPrice": 25.50 }
+  ]
+}
+
+### Validation failure -> 400 application/problem+json with per-field errors.
+POST {{host}}/api/orders
+Content-Type: application/json
+
+{ "customerEmail": "not-an-email", "currency": "eur", "lines": [] }
+
+### Insufficient stock -> 409 with sku/requested/available extensions.
+POST {{host}}/api/orders
+Content-Type: application/json
+
+{
+  "customerEmail": "greedy@example.com",
+  "currency": "EUR",
+  "lines": [{ "sku": "SKU-DOCK", "quantity": 999, "unitPrice": 5.00 }]
+}
+
+### Fetch one (note the ETag, derived from the @Version column).
+GET {{host}}/api/orders/REPLACE_WITH_ORDER_NUMBER
+
+### Search: paging, sorting, and the case-insensitive enum converter.
+GET {{host}}/api/orders?status=paid&email=alice&page=0&size=20&sort=createdAt,desc
+
+### Aggregates: JPQL constructor expression + JdbcClient reporting query.
+GET {{host}}/api/orders/statistics?days=30
+
+### Cached read (Caffeine, 5 min TTL).
+GET {{host}}/api/orders/customers/alice@example.com/lifetime-value
+
+### Cancel - 409 unless the order is NEW or PAID.
+POST {{host}}/api/orders/REPLACE_WITH_ORDER_NUMBER/cancellation
+
+### --- transaction laboratory -----------------------------------------------
+### Every propagation mode, called from no transaction.
+GET {{host}}/api/tx/propagation
+
+### REQUIRED joins the caller: both snapshots share one transaction name.
+GET {{host}}/api/tx/required-joins-caller
+
+### Scenarios. "rows" in the response shows what actually survived.
+POST {{host}}/api/tx/scenarios/requires-new-survives-rollback
+
+### Savepoints over the JDBC transaction manager: outer commits, inner is discarded.
+POST {{host}}/api/tx/scenarios/nested-isolated
+
+### The same thing under JpaTransactionManager: NestedTransactionNotSupportedException.
+POST {{host}}/api/tx/scenarios/nested-jpa-unsupported
+
+### Swallowing an inner REQUIRED failure poisons the outer commit.
+POST {{host}}/api/tx/scenarios/required-poisons-outer
+
+### A checked exception COMMITS by default.
+POST {{host}}/api/tx/scenarios/checked-commits
+
+### ...unless you declare rollbackFor.
+POST {{host}}/api/tx/scenarios/checked-rolls-back
+
+### this.method() bypasses the proxy: txName is the OUTER method.
+POST {{host}}/api/tx/scenarios/self-invocation-broken
+
+### Through the injected proxy: txName is requiresNewInternal.
+POST {{host}}/api/tx/scenarios/self-invocation-fixed
+
+### TransactionSynchronization callback order.
+POST {{host}}/api/tx/scenarios/synchronization
+
+### --- actuator -------------------------------------------------------------
+GET {{host}}/actuator/health
+
+### Breaker state, reported without calling the dependency.
+GET {{host}}/actuator/health/paymentGateway
+
+### The custom @Endpoint from platform-starter.
+GET {{host}}/actuator/platform
+
+### A @Selector path variable.
+GET {{host}}/actuator/platform/audit
+
+### Reset the audit counters (@DeleteOperation).
+DELETE {{host}}/actuator/platform
+
+### Why is (or is not) a bean there?
+GET {{host}}/actuator/conditions
+
+### Every bound @ConfigurationProperties.
+GET {{host}}/actuator/configprops
+
+### Flyway migration history.
+GET {{host}}/actuator/flyway
+
+### Retry metrics.
+GET {{host}}/actuator/metrics/retry.attempts
+
+### Prometheus scrape.
+GET {{host}}/actuator/prometheus
